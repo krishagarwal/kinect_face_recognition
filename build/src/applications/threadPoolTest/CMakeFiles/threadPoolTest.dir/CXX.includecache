@@ -1,0 +1,34 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../src/libkinectwrapper/include/ThreadPool.h
+thread
+-
+vector
+-
+functional
+-
+queue
+-
+mutex
+-
+condition_variable
+-
+future
+-
+
+/home/fri/asha_ritu/catkin_ws_kinect/src/kinect_body_tracking/kinect_hallway/src/applications/threadPoolTest/threadPoolTest.cpp
+ThreadPool.h
+/home/fri/asha_ritu/catkin_ws_kinect/src/kinect_body_tracking/kinect_hallway/src/applications/threadPoolTest/ThreadPool.h
+vector
+-
+functional
+-
+iostream
+-
+

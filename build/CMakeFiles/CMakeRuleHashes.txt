@@ -1,0 +1,4 @@
+# Hashes of file build rules.
+a9067c0c08db4f9d11cb4286440ad6c9 share/apriltag/build/apriltag_detect.docstring.h
+4761002b272f5baaf07abe73bc458e8f share/apriltag/build/apriltag_py_type.docstring.h
+de417630dc6db69523660fe0f6d14588 share/apriltag/build/apriltag_pywrap.o
