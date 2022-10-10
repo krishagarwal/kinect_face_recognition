@@ -5,6 +5,7 @@
 #include "include/MultiKinectWrapper.h"
 #include "include/MKPComputeGoal.h"
 #include <cstdlib>
+
 // for polyfit
 #include <Eigen/Dense>
 #include <cmath>
