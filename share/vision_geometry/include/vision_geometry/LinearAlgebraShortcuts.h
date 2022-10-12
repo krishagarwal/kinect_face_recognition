@@ -1,7 +1,7 @@
 #ifndef LINEAR_ALGEBRA_SHORTCUTS_H
 #define LINEAR_ALGEBRA_SHORTCUTS_H
 
-#include <opencv/cv.h>
+#include <opencv2/core.hpp>
 
 #include <Eigen/Dense>
 

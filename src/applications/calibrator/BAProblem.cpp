@@ -204,7 +204,7 @@ void BAProblem::checkReprojectionError(bool show)
             for (int r = 0; r < observedPoints.rows(); r++) {
                 for (int c = 0; c < observedPoints.cols(); c++) {
                     double diff = observedPoints(r, c) - imagePoints(r, c);
-                    error += abs(diff);
+                    error += diff < 0 ? -1 * diff : diff; // changed
                     residual += diff * diff;
                 }
             }

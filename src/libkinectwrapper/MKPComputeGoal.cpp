@@ -17,8 +17,8 @@ MKPComputeGoal::MKPComputeGoal(MultiKinectWrapper &mkw) : _mkw(mkw) {
 }
 
 MKPComputeGoal::~MKPComputeGoal() {
-    delete[] position;
-    delete[] orientation;
+    // delete[] position;
+    // delete[] orientation;
 }
 
 void MKPComputeGoal::addRecipient(MKPRecipient *r) {
@@ -90,7 +90,7 @@ void MKPComputeGoal::scanline() {
             double difference = sqrt(pow(person1x-person2x, 2) +  pow(person1z-person2z, 2));
 
             // if person2 is considered to be near person1, increment num_people_within
-            if (difference <= threshold) {
+            if (difference <= distance_threshold) {
                 num_people_within++;
             }
         }
@@ -106,21 +106,21 @@ void MKPComputeGoal::scanline() {
     if (end_people.size() == 0) {
         printf("error! couldn't find end people!\n");
     } else if (end_people.size() == 1) {
-        last_person = end_people.pop_back();
+        last_person = end_people.back();
     } else if (end_people.size() > 2) {
         printf("error! detected more than 2 end people!\n");
     } else {
-        k4abt_skeleton_t person1 = end_people.pop_back();
-        k4abt_skeleton_t person2 = end_people.pop_back();
+        k4abt_skeleton_t person1 = end_people.front();
+        k4abt_skeleton_t person2 = end_people.back();
 
         double person1_orientation = person1.joints[K4ABT_JOINT_PELVIS].position.xyz.z / 1000.0 * 3.281;
         double person2_orientation = person2.joints[K4ABT_JOINT_PELVIS].position.xyz.z / 1000.0 * 3.281;
 
-        if () {
+        // if () {
 
-        } else {
+        // } else {
             
-        }
+        // }
 
     }
 

@@ -8,7 +8,7 @@ SET(CMAKE_BUILD_TYPE Debug)
 
 find_package(Ceres REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(OpenCV 3 REQUIRED)
+find_package(OpenCV 4 REQUIRED)
 
 message("Eigen3" ${EIGEN3_INCLUDE_DIR})
 
@@ -16,7 +16,7 @@ message("Eigen3" ${EIGEN3_INCLUDE_DIR})
 include_directories(
     include
     ${Ceres_INCLUDE_DIR}
-    ${OpenCV_INCLUDE_DIR}
+    ${OpenCV_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIR}
     #/usr/include/eigen3
     #${catkin_INCLUDE_DIRS}

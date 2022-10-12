@@ -73,6 +73,7 @@ include_directories(
     ${VISION_GEOMETRY_INCLUDE_DIRS}
     ${APRIL_TAG_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIR}
+    ${OpenCV_INCLUDE_DIRS}
 )
 
 add_library(kinectwrapper ${LIB_KINECT_WRAPPER_SRC})

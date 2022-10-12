@@ -109,7 +109,7 @@ vector<CalibrationInput> load_dataset(string input_path, double targetSize, k4a:
         for (int cam = 0; cam < frames[frame].size(); cam++) {
             Mat image = frames[frame][cam];
             Mat grayscale;
-            cvtColor(image, grayscale, CV_RGB2GRAY);
+            cvtColor(image, grayscale, cv::COLOR_RGB2GRAY);
 
             image_u8_t img = {
                 .width = grayscale.cols,

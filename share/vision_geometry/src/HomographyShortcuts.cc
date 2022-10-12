@@ -7,7 +7,7 @@
 
 #include "ceres/ceres.h"
 
-#include <opencv/cv.h>
+#include <opencv2/core.hpp>
 
 using namespace ceres;
 using namespace cv;

@@ -41,7 +41,7 @@ k4a::image KinectPacket::getBGRAColorKinect() {
             memcpy(vec.data(), colorImageRaw.get_buffer(), colorImageRaw.get_size());
             // TODO look into these flags
             cv::Mat *decoded = new cv::Mat(cv::imdecode(vec, cv::IMREAD_ANYDEPTH | cv::IMREAD_COLOR | cv::IMREAD_IGNORE_ORIENTATION));
-            cv::cvtColor(*decoded, *decoded, CV_BGR2BGRA);
+            cv::cvtColor(*decoded, *decoded, cv::COLOR_BGR2GRAY);
             
             bgraColor = k4a::image::create_from_buffer(K4A_IMAGE_FORMAT_COLOR_BGRA32,
                 decoded->cols, decoded->rows, decoded->cols * decoded->elemSize(), decoded->data, decoded->total() * decoded->elemSize(),
@@ -64,7 +64,7 @@ cv::Mat KinectPacket::getRGBDepth() {
         cv::Mat cv_bgra = cv::Mat(colorDepthImage.get_height_pixels(), colorDepthImage.get_width_pixels(), CV_8UC4);
         memcpy(cv_bgra.data, colorDepthImage.get_buffer(), cv_bgra.rows * cv_bgra.cols * cv_bgra.elemSize());
 
-        cv::cvtColor(cv_bgra, rgbDepth, CV_BGRA2RGB);
+        cv::cvtColor(cv_bgra, rgbDepth, cv::COLOR_BGRA2RGB);
         rgbDepthReady = true;
         PROFILE_END("getRGBDepth");
     }
@@ -81,13 +81,13 @@ cv::Mat KinectPacket::getRGBColor() {
         if (image.get_format() == K4A_IMAGE_FORMAT_COLOR_BGRA32) {
             mat = cv::Mat(image.get_height_pixels(), image.get_width_pixels(), CV_8UC4);
             memcpy(mat.data, buffer, image.get_width_pixels() * image.get_height_pixels() * 4);
-            cv::cvtColor(mat, mat, CV_BGRA2RGB);
+            cv::cvtColor(mat, mat, cv::COLOR_BGRA2RGB);
             PROFILE_END("getRGBColor[bgra]");
         } else {
             std::vector<uint8_t> vec(image.get_size());
             memcpy(vec.data(), buffer, image.get_size());
             mat = cv::imdecode(vec, cv::IMREAD_ANYDEPTH | cv::IMREAD_COLOR | cv::IMREAD_IGNORE_ORIENTATION);
-            cv::cvtColor(mat, mat, CV_BGR2RGB);
+            cv::cvtColor(mat, mat, cv::COLOR_BGRA2RGB);
             PROFILE_END("getRGBColor[mjpg]");
         }
         rgbColor = mat;

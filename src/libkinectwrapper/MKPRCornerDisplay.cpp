@@ -1,7 +1,7 @@
 #include "include/MKPRCornerDisplay.h"
 #include "include/MultiKinectPacket.h"
 #include "include/MKConfig.h"
-#include <opencv/cv.hpp>
+#include <opencv2/core.hpp>
 
 using namespace cv;
 

@@ -4,7 +4,7 @@
 #include "MKPRecipient.h"
 #include <apriltag/apriltag.h>
 #include <Eigen/Dense>
-#include <opencv/cv.hpp>
+#include <opencv2/core.hpp>
 
 class MKPRAprilTag : public MKPRecipient {
 public:

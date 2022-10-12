@@ -1,4 +1,5 @@
 #include <vision_geometry/LinearAlgebraShortcuts.h>
+#include <opencv2/core/types_c.h>
 
 using namespace cv;
 using namespace Eigen;

@@ -31,7 +31,7 @@ void showPoints(Mat &frameBGR, MatrixXd inPts, Scalar &s) {
 std::vector<cv::Mat> loadImages(std::vector<std::string> files) {
     vector<Mat> images;
     for(size_t i = 0; i < files.size(); i++) {
-        images.push_back(imread(files[i], CV_LOAD_IMAGE_COLOR));
+        images.push_back(imread(files[i], cv::IMREAD_COLOR));
     }
     return images;
 }
@@ -47,7 +47,7 @@ void detectCorners(
         cout << "findChessboardCorners" << endl;
         if(found) {
             Mat gray_image;
-            cvtColor(inImages[i], gray_image, CV_BGR2GRAY);
+            cvtColor(inImages[i], gray_image, cv::COLOR_BGR2GRAY);
             //cornerSubPix(gray_image, c, s, Size(-1, -1)
             //    , TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 30, 0.1));
             drawChessboardCorners(inImages[i], s, c, found);
@@ -76,7 +76,7 @@ bool detectFrameCorners(
     if (found)
     {
         Mat gray_image;
-        cvtColor(inImage, gray_image, CV_BGR2GRAY);
+        cvtColor(inImage, gray_image, cv::COLOR_BGR2GRAY);
         drawChessboardCorners(inImage, s, c, found);
         outImage = inImage;
         MatrixXd d = convert2ChanCVMatToEigenMatF(c);

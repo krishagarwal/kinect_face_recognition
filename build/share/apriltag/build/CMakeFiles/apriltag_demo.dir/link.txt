@@ -1,1 +1,0 @@
-/usr/bin/cc -O3 -DNDEBUG  -rdynamic CMakeFiles/apriltag_demo.dir/example/apriltag_demo.c.o  -o apriltag_demo -Wl,-rpath,/home/fri/asha_ritu/catkin_ws_kinect/src/kinect_body_tracking/kinect_hallway/build/share/apriltag/build: libapriltag.so.3.1.0 -lpthread -lm 
