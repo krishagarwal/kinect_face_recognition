@@ -12,14 +12,9 @@
 #include <vector>
 #include <Eigen/QR>
 
-MKPComputeGoal::MKPComputeGoal(MultiKinectWrapper &mkw) : _mkw(mkw) {
+MKPComputeGoal::MKPComputeGoal(MultiKinectWrapper &mkw) : _mkw(mkw) {}
 
-}
-
-MKPComputeGoal::~MKPComputeGoal() {
-    // delete[] position;
-    // delete[] orientation;
-}
+MKPComputeGoal::~MKPComputeGoal() {}
 
 void MKPComputeGoal::addRecipient(MKPRecipient *r) {
     _r.push_back(r);
@@ -29,141 +24,59 @@ void MKPComputeGoal::addRecipient(MKPRecipient *r) {
 void MKPComputeGoal::receiveFrame(MultiKinectPacket &mkp) {
     PROFILE_START;
 
+    // set body frame object
     body_frame = mkp[0].getBodyFrame();
-    if (body_frame) computeGoal();
+    
+    if (body_frame) {
+        scanLine();
+        computeGoal();
+    }
     
     PROFILE_END("MKPComputeGoal.receiveFrame");
 }
 
 float* MKPComputeGoal::getPosition() {
-    return position;
-    
+    return position; 
 }
+
 float* MKPComputeGoal::getOrientation() {
     return orientation;
 }
 
-void MKPComputeGoal::scanline() {
-    std::vector<double> xpos;
-    std::vector<double> zpos;
-    std::vector<double> coeff;
-
-    // get fitted line
-    for (int i = 0; i < body_frame.get_num_bodies(); i++) {
-        k4abt_skeleton_t skeleton = body_frame.get_body_skeleton(i);
-
-        position[0] = skeleton.joints[K4ABT_JOINT_PELVIS].position.xyz.x / 1000.0 * 3.281;
-        position[1] = skeleton.joints[K4ABT_JOINT_PELVIS].position.xyz.y / 1000.0 * 3.281;
-        position[2] = skeleton.joints[K4ABT_JOINT_PELVIS].position.xyz.z / 1000.0 * 3.281;
-
-        xpos.push_back(position[0]);
-        zpos.push_back(position[2]);
-    }
-
-    /* 
-        1. save the skeleton of the last person
-        2. save their x value
-    */
-
-    /* define a threshold value - if there is anyone within this distance, they are considered near*/
-    double distance_threshold = 3.0;
-    std::vector<k4abt_skeleton_t> end_people;
-    
-    // Go through each body in line
-    for (int i = 0; i < body_frame.get_num_bodies(); i++) {
-        k4abt_skeleton_t person1 = body_frame.get_body_skeleton(i);
-        int num_people_within = 0;
-
-        // get current person's x and z pos
-        double person1x = person1.joints[K4ABT_JOINT_PELVIS].position.xyz.x / 1000.0 * 3.281;
-        double person1z = person1.joints[K4ABT_JOINT_PELVIS].position.xyz.z / 1000.0 * 3.281;
-
-        // compare current body with all other bodies in frame to check how many are near this body
-        for (int j = i+1; j < body_frame.get_num_bodies(); j++) {
-            k4abt_skeleton_t person2 = body_frame.get_body_skeleton(j);
-
-            // get comparing person's x and z pos
-            double person2x = person2.joints[K4ABT_JOINT_PELVIS].position.xyz.x / 1000.0 * 3.281;
-            double person2z = person2.joints[K4ABT_JOINT_PELVIS].position.xyz.z / 1000.0 * 3.281;
-
-            // use distance formula to get absolute difference between two people
-            double difference = sqrt(pow(person1x-person2x, 2) +  pow(person1z-person2z, 2));
-
-            // if person2 is considered to be near person1, increment num_people_within
-            if (difference <= distance_threshold) {
-                num_people_within++;
-            }
-        }
-
-        // if none or only 1 person is near the current person, that means they are at the front or back of line
-        if (num_people_within <= 1) {
-            end_people.push_back(person1);
-        }
-    }
-
-    k4abt_skeleton_t last_person;
-    // now that we have end people, calculate direction line is facing
-    if (end_people.size() == 0) {
-        printf("error! couldn't find end people!\n");
-    } else if (end_people.size() == 1) {
-        last_person = end_people.back();
-    } else if (end_people.size() > 2) {
-        printf("error! detected more than 2 end people!\n");
-    } else {
-        k4abt_skeleton_t person1 = end_people.front();
-        k4abt_skeleton_t person2 = end_people.back();
-
-        double person1_orientation = person1.joints[K4ABT_JOINT_PELVIS].position.xyz.z / 1000.0 * 3.281;
-        double person2_orientation = person2.joints[K4ABT_JOINT_PELVIS].position.xyz.z / 1000.0 * 3.281;
-
-        // if () {
-
-        // } else {
-            
-        // }
-
-    }
-
-    // get fitted function
-    polyfit(xpos, zpos, coeff, 1);
-    std::vector<double> fitted_z_pos ;
-    for (int i = 0; i < xpos.size(); i++) {
-        double zfitted = coeff[0] + coeff[1]*xpos.at(i) + coeff[2]*(pow(xpos.at(i), 2)) +coeff[3]*(pow(xpos.at(i), 3));
-        fitted_z_pos.push_back(zfitted);
-    }
+/* determine spacing, polyfit, and last person, save in class variables */
+void MKPComputeGoal::scanLine() {
+    /* 1. determine average spacing. iterate through ine two people at a time, 
+    compute avg distance between pelvis joints and save average */
+    averageDistance = avgDistance(body_frame);
+    /* 2. determine the last person in the line */
+    lastPerson = getLastPerson(body_frame);
+    /* 3. create the fitted line */
+    fittedLine = getFittedLine(body_frame);
 }
 
 /* fills out the position and orientation arrays with the person's position and orientation. */
 void MKPComputeGoal::computeGoal() {
-    k4abt_skeleton_t skeleton = body_frame.get_body_skeleton(0);
-
-    position[0] = skeleton.joints[K4ABT_JOINT_PELVIS].position.xyz.x / 1000.0 * 3.281;
-    position[1] = skeleton.joints[K4ABT_JOINT_PELVIS].position.xyz.y / 1000.0 * 3.281;
-    position[2] = skeleton.joints[K4ABT_JOINT_PELVIS].position.xyz.z / 1000.0 * 3.281;
-
-    orientation[0] = skeleton.joints[K4ABT_JOINT_PELVIS].orientation.wxyz.w / 1000.0 * 3.281;
-    orientation[1] = skeleton.joints[K4ABT_JOINT_PELVIS].orientation.wxyz.x / 1000.0 * 3.281;
-    orientation[2] = skeleton.joints[K4ABT_JOINT_PELVIS].orientation.wxyz.y / 1000.0 * 3.281;
-    orientation[3] = skeleton.joints[K4ABT_JOINT_PELVIS].orientation.wxyz.z / 1000.0 * 3.281;
-
-    // printf("%.3f\n", position[1]);
-
-    // printf("position: %.3f, %.3f, %.3f\n", position[0], position[1], position[2]);
-    // printf("orientation: %.3f, %.3f, %.3f, %.3f\n", orientation[0], orientation[1],orientation[2], orientation[3]);
+   /* from the last person, move avgDistance amount along the fittedLine. fill out class variable goalPose */
 }
 
-/* 
-1. scan line, determine average distance between each person
-2. determine who is at the end of the line
-    a) no one on one side of them
-    b) if front and back angle < 0, person on the right. vice versa
-3. calculate linear regression + find expected value for last person
-4. move to (expected value) + (average x distance) + (average y distance).
 
-*/
+float MKPComputeGoal::avgDistance(k4abt::frame bodyFrame) {
+    float avg = 0.0; 
+    /* implement*/
+    return avg;
+}
+
+float* MKPComputeGoal::calculateJointPos(k4abt_skeleton_t skeleton, k4abt_joint_id_t joint) {
+    float position[3];
+    position[0] = skeleton.joints[joint].position.xyz.x / 1000.0 * 3.281;
+    position[1] = skeleton.joints[joint].position.xyz.y / 1000.0 * 3.281;
+    position[2] = skeleton.joints[joint].position.xyz.z / 1000.0 * 3.281;
+
+    return position;
+}
 
 //  calculate the expected position of the last person in line
-void MKPComputeGoal::polyfit(const std::vector<double> &t,const std::vector<double> &v, std::vector<double> &coeff, int order)
+void MKPComputeGoal::polyfit(const std::vector<double> &t, const std::vector<double> &v, std::vector<double> &coeff, int order)
 {
 	// Create Matrix Placeholder of size n x k, n= number of datapoints, k = order of polynomial, for exame k = 3 for cubic polynomial
 	Eigen::MatrixXd T(t.size(), order + 1);
@@ -191,3 +104,115 @@ void MKPComputeGoal::polyfit(const std::vector<double> &t,const std::vector<doub
 	}
 
 }
+ 
+
+std::vector<float> MKPComputeGoal::getFittedLine(k4abt::frame bodyFrame) {
+    std::vector<double> xpos;
+    std::vector<double> zpos;
+    std::vector<double> coeff;
+    std::vector<float> fitted_line;
+
+    // get fitted line
+    for (int i = 0; i < bodyFrame.get_num_bodies(); i++) {
+        k4abt_skeleton_t skeleton = bodyFrame.get_body_skeleton(i);
+        float* position = calculateJointPos(skeleton, K4ABT_JOINT_PELVIS);
+        xpos.push_back(position[0]);
+        zpos.push_back(position[2]);
+    }
+
+    // get fitted function
+    polyfit(xpos, zpos, coeff, 1);
+    for (int i = 0; i < xpos.size(); i++) {
+        double zfitted = coeff[0] + coeff[1]*xpos.at(i) + coeff[2]*(pow(xpos.at(i), 2)) +coeff[3]*(pow(xpos.at(i), 3));
+        fitted_line.push_back(zfitted);
+    }
+
+    return fitted_line;
+}
+
+std::vector<k4abt_skeleton_t> MKPComputeGoal::getEndPeople(k4abt::frame bodyFrame) {
+    k4abt_skeleton_t lastPerson;
+
+    /* define a threshold value - if there is anyone within this distance, they are considered near*/
+    double distance_threshold = 3.0;
+    std::vector<k4abt_skeleton_t> end_people;
+    
+    // Go through each body in line
+    for (int i = 0; i < bodyFrame.get_num_bodies(); i++) {
+        k4abt_skeleton_t person1 = bodyFrame.get_body_skeleton(i);
+        int num_people_within = 0;
+
+        // get current person's x and z pos
+        float* person1Pos = calculateJointPos(person1, K4ABT_JOINT_PELVIS);
+        double person1x = person1Pos[0];
+        double person1z = person1Pos[2];
+
+        // compare current body with all other bodies in frame to check how many are near this body
+        for (int j = i+1; j < bodyFrame.get_num_bodies(); j++) {
+            k4abt_skeleton_t person2 = bodyFrame.get_body_skeleton(j);
+
+            // get comparing person's x and z pos
+            float* person2Pos = calculateJointPos(person2, K4ABT_JOINT_PELVIS);
+            double person2x = person1Pos[0];
+            double person2z = person1Pos[2];
+
+            // use distance formula to get absolute difference between two people
+            double difference = sqrt(pow(person1x-person2x, 2) +  pow(person1z-person2z, 2));
+
+            // if person2 is considered to be near person1, increment num_people_within
+            if (difference <= distance_threshold) num_people_within++;
+
+        }
+
+        // if none or only 1 person is near the current person, that means they are at the front or back of line
+        if (num_people_within <= 1) end_people.push_back(person1);
+    
+    }
+
+    return end_people;
+}
+
+k4abt_skeleton_t MKPComputeGoal::getRightmostPerson(std::vector<k4abt_skeleton_t> people) {
+    k4abt_skeleton_t rightPerson = people.at(0);
+    float max_size = calculateJointPos(rightPerson, K4ABT_JOINT_PELVIS)[0];
+    for (int i = 0; i < people.size(); i++) {
+        if (calculateJointPos(people.at(i), K4ABT_JOINT_PELVIS)[0] > max_size) {
+            max_size = calculateJointPos(people.at(i), K4ABT_JOINT_PELVIS)[0];
+            rightPerson = people.at(i);
+        }
+    }
+    return rightPerson;
+}
+
+k4abt_skeleton_t MKPComputeGoal::getLastPerson(k4abt::frame bodyFrame) {
+    
+    std::vector<k4abt_skeleton_t> end_people = getEndPeople(bodyFrame);
+    int numPeople = end_people.size();
+
+    k4abt_skeleton_t last_person;
+    
+    // now that we have end people, calculate direction line is facing
+    // switch ( {
+    //     case 0:
+    //         break;
+    //     case 1:
+    //         break;
+    //     default:
+            
+    // }
+    
+    if (end_people.size() == 0) {
+        printf("error! couldn't find end people!\n");
+    } else if (end_people.size() == 1) {
+        last_person = end_people.back();
+    } else {
+        /* choose the person with the higher x value. WILL PROBABLY CHANGE THIS BASED ON LOCATION OF TEST */
+        last_person = getRightmostPerson(end_people);
+    }
+    if (end_people.size() > 2) {
+        printf("WARNING: detected more than 2 end people!\n");
+    }
+
+    return last_person;
+}
+
