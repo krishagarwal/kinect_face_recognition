@@ -41,9 +41,15 @@ void MKPPersonTracker::receiveFrame(MultiKinectPacket &mkp) {
             printf("no body in frame.\n");
         }
     }
+
     PROFILE_END("MKPPersonTracker.receiveFrame");
 
+
+    printf("\nrecipient size: %d\n", _r.size());
+
     for(size_t i = 0; i < _r.size(); i++) {
+        printf("\nCalling receive frame\n");
         _r[i]->receiveFrame(mkp);
     }
+
 }

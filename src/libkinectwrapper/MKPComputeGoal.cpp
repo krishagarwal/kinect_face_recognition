@@ -26,13 +26,45 @@ void MKPComputeGoal::receiveFrame(MultiKinectPacket &mkp) {
 
     // set body frame object
     body_frame = mkp[0].getBodyFrame();
-    
     if (body_frame) {
-        scanLine();
-        computeGoal();
+        loadBodies(0,0);
     }
+    //scanLine();
+    //computeGoal();
+
     
     PROFILE_END("MKPComputeGoal.receiveFrame");
+}
+
+void MKPComputeGoal::loadBodies(int num_spoofed, float distance) {
+    for (int i = 0; i < body_frame.get_num_bodies(); i++) {
+        k4abt_skeleton_t skeleton = body_frame.get_body_skeleton(i);
+        float* position = calculateJointPos(skeleton, K4ABT_JOINT_PELVIS);
+        float* orientation = calculateJointOrient(skeleton, K4ABT_JOINT_PELVIS);
+
+        struct Point pt = {position[0], position[1], position[2]};
+        struct Quaternion quat = {orientation[0], orientation[1], orientation[2], orientation[3]};
+        struct Pose pose = {pt, quat};
+
+        printf("Body #%d\n", i);
+        printf("Point: {%.3f,%.3f,%.3f}\n", pt.x,pt.y,pt.z);
+        printf("Quaternion: {%.3f,%3f,%3f,%3f}\n", quat.x, quat.y, quat.z, quat.w);
+        printf("-----\n");
+
+        bodies.push_back(pose);
+    }
+
+    struct Point start_pos = {-5, 0, 5};
+
+    for  (int i = 0; i < num_spoofed; i++) {
+        float x_rand = std::rand()/((RAND_MAX + 1u));
+        float z_rand = std::rand()/((RAND_MAX + 1u));
+        struct Point pt = {start_pos.x + i*distance + x_rand, start_pos.y, start_pos.z + z_rand};
+        struct Quaternion quat = {0,0,0,0};
+        struct Pose pose = {pt, quat};
+        bodies.push_back(pose);
+    }
+
 }
 
 float* MKPComputeGoal::getPosition() {
@@ -41,7 +73,7 @@ float* MKPComputeGoal::getPosition() {
 
 float* MKPComputeGoal::getOrientation() {
     return orientation;
-}
+} 
 
 /* determine spacing, polyfit, and last person, save in class variables */
 void MKPComputeGoal::scanLine() {
@@ -73,6 +105,17 @@ float* MKPComputeGoal::calculateJointPos(k4abt_skeleton_t skeleton, k4abt_joint_
     position[2] = skeleton.joints[joint].position.xyz.z / 1000.0 * 3.281;
 
     return position;
+}
+
+float* MKPComputeGoal::calculateJointOrient(k4abt_skeleton_t skeleton, k4abt_joint_id_t joint) {
+    float orientation[3];
+
+    orientation[0] = skeleton.joints[joint].orientation.wxyz.x;
+    orientation[1] = skeleton.joints[joint].orientation.wxyz.y;
+    orientation[2] = skeleton.joints[joint].orientation.wxyz.z;
+    orientation[3] = skeleton.joints[joint].orientation.wxyz.w;
+
+    return orientation;
 }
 
 //  calculate the expected position of the last person in line
@@ -192,14 +235,6 @@ k4abt_skeleton_t MKPComputeGoal::getLastPerson(k4abt::frame bodyFrame) {
     k4abt_skeleton_t last_person;
     
     // now that we have end people, calculate direction line is facing
-    // switch ( {
-    //     case 0:
-    //         break;
-    //     case 1:
-    //         break;
-    //     default:
-            
-    // }
     
     if (end_people.size() == 0) {
         printf("error! couldn't find end people!\n");
@@ -215,4 +250,3 @@ k4abt_skeleton_t MKPComputeGoal::getLastPerson(k4abt::frame bodyFrame) {
 
     return last_person;
 }
-
