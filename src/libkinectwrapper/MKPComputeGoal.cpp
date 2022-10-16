@@ -12,7 +12,9 @@
 #include <vector>
 #include <Eigen/QR>
 
-MKPComputeGoal::MKPComputeGoal(MultiKinectWrapper &mkw) : _mkw(mkw) {}
+MKPComputeGoal::MKPComputeGoal(MultiKinectWrapper &mkw) : _mkw(mkw) {
+    num_bodies = 0;
+}
 
 MKPComputeGoal::~MKPComputeGoal() {}
 
@@ -27,7 +29,7 @@ void MKPComputeGoal::receiveFrame(MultiKinectPacket &mkp) {
     // set body frame object
     body_frame = mkp[0].getBodyFrame();
     if (body_frame) {
-        loadBodies(0,0);
+        loadBodies(2, 3);
     }
     //scanLine();
     //computeGoal();
@@ -36,35 +38,82 @@ void MKPComputeGoal::receiveFrame(MultiKinectPacket &mkp) {
     PROFILE_END("MKPComputeGoal.receiveFrame");
 }
 
+// Pose** MKPComputeGoal::getBodies() {
+//     return bodies;
+// }
+
 void MKPComputeGoal::loadBodies(int num_spoofed, float distance) {
+    num_bodies = 0; //body_frame.get_num_bodies();
+    printf("\nnum bodies: %d\n", body_frame.get_num_bodies());
     for (int i = 0; i < body_frame.get_num_bodies(); i++) {
         k4abt_skeleton_t skeleton = body_frame.get_body_skeleton(i);
-        float* position = calculateJointPos(skeleton, K4ABT_JOINT_PELVIS);
-        float* orientation = calculateJointOrient(skeleton, K4ABT_JOINT_PELVIS);
+        // float* position = calculateJointPos(skeleton, K4ABT_JOINT_PELVIS);
+        // float* orientation = calculateJointOrient(skeleton, K4ABT_JOINT_PELVIS);
+        
+        Point pt = {skeleton.joints[joint].position.xyz.x / 1000.0 * 3.281, skeleton.joints[joint].position.xyz.y / 1000.0 * 3.281, skeleton.joints[joint].position.xyz.z / 1000.0 * 3.281};
+        k4abt_joint_id_t joint = K4ABT_JOINT_PELVIS;
+        // ptr->x = skeleton.joints[joint].position.xyz.x / 1000.0 * 3.281;
+        // ptr->y = skeleton.joints[joint].position.xyz.y / 1000.0 * 3.281;
+        // ptr->z = skeleton.joints[joint].position.xyz.z / 1000.0 * 3.281;
+        printf("\nassigned position.\n");
 
-        struct Point pt = {position[0], position[1], position[2]};
-        struct Quaternion quat = {orientation[0], orientation[1], orientation[2], orientation[3]};
-        struct Pose pose = {pt, quat};
+        // printf("position x in struct: %.3f\n", pt.x);
 
-        printf("Body #%d\n", i);
-        printf("Point: {%.3f,%.3f,%.3f}\n", pt.x,pt.y,pt.z);
-        printf("Quaternion: {%.3f,%3f,%3f,%3f}\n", quat.x, quat.y, quat.z, quat.w);
-        printf("-----\n");
+        Quaternion* quat, q;
+        quat = &q;
+        quat->w = skeleton.joints[joint].orientation.wxyz.w;
+        quat->x = skeleton.joints[joint].orientation.wxyz.x;
+        quat->y = skeleton.joints[joint].orientation.wxyz.y;
+        quat->z = skeleton.joints[joint].orientation.wxyz.z;
+        printf("\nassigned orientation.\n");
 
-        bodies.push_back(pose);
+        Pose pose;
+        pose.position = &pt;
+        pose.orientation = quat;
+
+        printf("MKP: body %d pose addr: %p\n", num_bodies, &pose);
+        bodies[i] = &pose;
+        
+        printf("\nadded pose to bodies array.\n");
+
+        printf("MKP: body %d x: %.5f\n", i, bodies[i]->position->x);
+        //printf("body 1 pose x: %.3f\n", bodies[1]->position.x);
+        num_bodies++;
     }
 
-    struct Point start_pos = {-5, 0, 5};
 
+    Point start_pos = {-5, 0, 5};
+    printf("start spoofing\n");
     for  (int i = 0; i < num_spoofed; i++) {
-        float x_rand = std::rand()/((RAND_MAX + 1u));
-        float z_rand = std::rand()/((RAND_MAX + 1u));
-        struct Point pt = {start_pos.x + i*distance + x_rand, start_pos.y, start_pos.z + z_rand};
-        struct Quaternion quat = {0,0,0,0};
-        struct Pose pose = {pt, quat};
-        bodies.push_back(pose);
-    }
+        float x_rand = 0.3; //std::rand()/((RAND_MAX + 1u));
+        float z_rand = 0.4; //std::rand()/((RAND_MAX + 1u));
+        Point* ptr, pt;
+        ptr = &pt;
+        ptr->x = start_pos.x + i*distance + x_rand;
+        ptr->y = start_pos.y;
+        ptr->z = start_pos.z + z_rand;
+        
+        Quaternion* quat, q;
+        quat = &q;
+        quat->w = 0.0;
+        quat->x = 0.0;
+        quat->y = 0.0;
+        quat->z = 0.0;
 
+        Pose pose;
+        pose.position = ptr;
+        pose.orientation = quat;
+        
+        printf("MKP: body %d pose addr: %p\n", num_bodies, &pose);
+        bodies[num_bodies] = &pose;
+        printf("MKP: body %d x: %.5f\n", num_bodies, bodies[num_bodies]->position->x);
+        num_bodies++;
+    }
+    //num_bodies += num_spoofed;
+    printf("end spoofing\n");
+    printf("MKP OUTSIDE: body %d x: %.5f\n", 0, bodies[0]->position->x);
+    printf("MKP OUTSIDE: body %d x: %.5f\n", 1, bodies[1]->position->x);
+    printf("num_bodies: %d\n", num_bodies);
 }
 
 float* MKPComputeGoal::getPosition() {
@@ -74,6 +123,10 @@ float* MKPComputeGoal::getPosition() {
 float* MKPComputeGoal::getOrientation() {
     return orientation;
 } 
+
+int MKPComputeGoal::getNumBodies() {
+    return num_bodies;
+}
 
 /* determine spacing, polyfit, and last person, save in class variables */
 void MKPComputeGoal::scanLine() {
@@ -104,16 +157,21 @@ float* MKPComputeGoal::calculateJointPos(k4abt_skeleton_t skeleton, k4abt_joint_
     position[1] = skeleton.joints[joint].position.xyz.y / 1000.0 * 3.281;
     position[2] = skeleton.joints[joint].position.xyz.z / 1000.0 * 3.281;
 
+    printf("Point: {%.3f,%.3f,%.3f}\n", position[0],position[1],position[2]);
+
     return position;
 }
 
 float* MKPComputeGoal::calculateJointOrient(k4abt_skeleton_t skeleton, k4abt_joint_id_t joint) {
-    float orientation[3];
+    float orientation[4];
 
     orientation[0] = skeleton.joints[joint].orientation.wxyz.x;
     orientation[1] = skeleton.joints[joint].orientation.wxyz.y;
     orientation[2] = skeleton.joints[joint].orientation.wxyz.z;
     orientation[3] = skeleton.joints[joint].orientation.wxyz.w;
+
+    // printf("Quaternion: {%.3f,%3f,%3f,%3f}\n", orientation[0], orientation[1], orientation[2], orientation[3]);
+    // printf("-----\n");
 
     return orientation;
 }

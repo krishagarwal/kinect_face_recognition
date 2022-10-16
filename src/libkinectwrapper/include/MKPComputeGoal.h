@@ -7,6 +7,9 @@
 class MKPRecipient;
 class MultiKinectWrapper;
 
+
+
+
 class MKPComputeGoal : public MKPRecipient {
 
 protected:
@@ -14,27 +17,8 @@ protected:
     std::vector<MKPRecipient *> _r;
     k4abt::frame body_frame;  
 
-    struct Point {             
-        float x;
-        float y;
-        float z;   
-    }; 
-
-    struct Quaternion {          
-        float x;
-        float y;
-        float z;   
-        float w; 
-    };  
-    
-    struct Pose {             
-        struct Point position;         
-        struct Quaternion orientation;   
-    };   
-
-    std::vector<struct Pose>  bodies;  
-
-    struct Pose Pose;
+    int num_bodies;
+    //struct Pose goalPose;
     
     void computeGoal();
     void scanLine();
@@ -50,7 +34,6 @@ protected:
     float* calculateJointPos(k4abt_skeleton_t skeleton, k4abt_joint_id_t joint);
     float* calculateJointOrient(k4abt_skeleton_t skeleton, k4abt_joint_id_t joint);
 
-
     float averageDistance;
     std::vector<float> fittedLine;
     k4abt_skeleton_t lastPerson;
@@ -59,23 +42,41 @@ protected:
     float position [3];
     float orientation [4];
 
-
-
 public:
+
+    struct Point {             
+        float x;
+        float y;
+        float z;
+    }; 
+
+    struct Quaternion {          
+        float x;
+        float y;
+        float z;   
+        float w; 
+    };  
+
+    struct Pose {             
+        Point* position;         
+        Quaternion* orientation;   
+    };   
+
     MKPComputeGoal(MultiKinectWrapper &mkw);
     ~MKPComputeGoal();
 
     void addRecipient(MKPRecipient *r);
     void receiveFrame(MultiKinectPacket &mkp);
 
-    struct Pose getGoal();
+    Pose getGoal();
     
     // for debugging
     float* getPosition();
     float* getOrientation(); 
-    std::vector<struct Pose> getBodies();
+    //Pose** getBodies();
+    int getNumBodies();
 
-
+    Pose* bodies[20];  
 };
 
 #endif

@@ -33,22 +33,16 @@ void MKPPersonTracker::receiveFrame(MultiKinectPacket &mkp) {
         _tracker[i].enqueue_capture(mkp[i].getCapture(), wait);
     }
     for(size_t i = 0; i < nCameras; i++) {
-        if (mkp[i].getBodyFrame()) {
-            k4abt::frame bf;
-            _tracker[i].pop_result(&bf, wait);
-            mkp[i].setBodyFrame(bf);
-        } else {
-            printf("no body in frame.\n");
-        }
+        
+        k4abt::frame bf;
+        _tracker[i].pop_result(&bf, wait);
+        mkp[i].setBodyFrame(bf);
+        if (!mkp[i].getBodyFrame()) printf("no body in frame.\n");
     }
 
     PROFILE_END("MKPPersonTracker.receiveFrame");
 
-
-    printf("\nrecipient size: %d\n", _r.size());
-
     for(size_t i = 0; i < _r.size(); i++) {
-        printf("\nCalling receive frame\n");
         _r[i]->receiveFrame(mkp);
     }
 
