@@ -7,9 +7,6 @@
 class MKPRecipient;
 class MultiKinectWrapper;
 
-
-
-
 class MKPComputeGoal : public MKPRecipient {
 
 protected:
@@ -17,25 +14,30 @@ protected:
     std::vector<MKPRecipient *> _r;
     k4abt::frame body_frame;  
 
-    int num_bodies;
+    int num_real_bodies;
+    int num_spoofed;
+
     //struct Pose goalPose;
     
     void computeGoal();
     void scanLine();
-    void polyfit(const std::vector<double> &t, const std::vector<double> &v, std::vector<double> &coeff, int order);
+    void polyfit(const std::vector<double> &t, const std::vector<double> &v, int order);
 
     float avgDistance(k4abt::frame bodyFrame);
-    std::vector<float> getFittedLine(k4abt::frame bodyFrame);
+
+    void getFittedLine();
+
     k4abt_skeleton_t getLastPerson(k4abt::frame bodyFrame);
     std::vector<k4abt_skeleton_t> getEndPeople(k4abt::frame bodyFrame);
     k4abt_skeleton_t getRightmostPerson(std::vector<k4abt_skeleton_t> people);
-    void loadBodies(int num_spoofed, float distance);
+    void loadBodies();
+    void loadSpoofed(float distance);
+
 
     float* calculateJointPos(k4abt_skeleton_t skeleton, k4abt_joint_id_t joint);
     float* calculateJointOrient(k4abt_skeleton_t skeleton, k4abt_joint_id_t joint);
 
     float averageDistance;
-    std::vector<float> fittedLine;
     k4abt_skeleton_t lastPerson;
 
     // for debugging
@@ -75,8 +77,13 @@ public:
     float* getOrientation(); 
     //Pose** getBodies();
     int getNumBodies();
-
+    // std::vector<Point*> getFittedPoints();
+    // Point* fittedPoints[20];
     Pose* bodies[20];  
+    void printLine();
+
+    std::vector<double> coeffs;
+
 };
 
 #endif

@@ -13,7 +13,11 @@
 #include <Eigen/QR>
 
 MKPComputeGoal::MKPComputeGoal(MultiKinectWrapper &mkw) : _mkw(mkw) {
-    num_bodies = 0;
+    num_spoofed = 0;
+    num_real_bodies = 0;
+    float dist = 3;
+
+    loadSpoofed(dist);
 }
 
 MKPComputeGoal::~MKPComputeGoal() {}
@@ -25,95 +29,75 @@ void MKPComputeGoal::addRecipient(MKPRecipient *r) {
 /* get the body frame from the packet and fill out the position and orientation arrays with the goal */
 void MKPComputeGoal::receiveFrame(MultiKinectPacket &mkp) {
     PROFILE_START;
-
+    
     // set body frame object
     body_frame = mkp[0].getBodyFrame();
     if (body_frame) {
-        loadBodies(2, 3);
+        loadBodies();
     }
-    //scanLine();
+    scanLine();
     //computeGoal();
 
-    
     PROFILE_END("MKPComputeGoal.receiveFrame");
 }
 
-// Pose** MKPComputeGoal::getBodies() {
-//     return bodies;
-// }
-
-void MKPComputeGoal::loadBodies(int num_spoofed, float distance) {
-    num_bodies = 0; //body_frame.get_num_bodies();
-    printf("\nnum bodies: %d\n", body_frame.get_num_bodies());
+void MKPComputeGoal::loadBodies() {
+    num_real_bodies = 0;
     for (int i = 0; i < body_frame.get_num_bodies(); i++) {
-        k4abt_skeleton_t skeleton = body_frame.get_body_skeleton(i);
-        // float* position = calculateJointPos(skeleton, K4ABT_JOINT_PELVIS);
-        // float* orientation = calculateJointOrient(skeleton, K4ABT_JOINT_PELVIS);
-        
-        Point pt = {skeleton.joints[joint].position.xyz.x / 1000.0 * 3.281, skeleton.joints[joint].position.xyz.y / 1000.0 * 3.281, skeleton.joints[joint].position.xyz.z / 1000.0 * 3.281};
+        k4abt_skeleton_t skeleton = body_frame.get_body_skeleton(i);        
         k4abt_joint_id_t joint = K4ABT_JOINT_PELVIS;
-        // ptr->x = skeleton.joints[joint].position.xyz.x / 1000.0 * 3.281;
-        // ptr->y = skeleton.joints[joint].position.xyz.y / 1000.0 * 3.281;
-        // ptr->z = skeleton.joints[joint].position.xyz.z / 1000.0 * 3.281;
-        printf("\nassigned position.\n");
 
-        // printf("position x in struct: %.3f\n", pt.x);
+        Point* pt = new Point;
+        pt->x = skeleton.joints[joint].position.xyz.x / 1000.0 * 3.281;
+        pt->y = skeleton.joints[joint].position.xyz.y / 1000.0 * 3.281;
+        pt->z = skeleton.joints[joint].position.xyz.z / 1000.0 * 3.281;
 
-        Quaternion* quat, q;
-        quat = &q;
+
+        Quaternion* quat = new Quaternion;
         quat->w = skeleton.joints[joint].orientation.wxyz.w;
         quat->x = skeleton.joints[joint].orientation.wxyz.x;
         quat->y = skeleton.joints[joint].orientation.wxyz.y;
         quat->z = skeleton.joints[joint].orientation.wxyz.z;
-        printf("\nassigned orientation.\n");
 
-        Pose pose;
-        pose.position = &pt;
-        pose.orientation = quat;
+        Pose* pose = new Pose;
+        pose->position = pt;
+        pose->orientation = quat;
 
-        printf("MKP: body %d pose addr: %p\n", num_bodies, &pose);
-        bodies[i] = &pose;
-        
-        printf("\nadded pose to bodies array.\n");
-
-        printf("MKP: body %d x: %.5f\n", i, bodies[i]->position->x);
-        //printf("body 1 pose x: %.3f\n", bodies[1]->position.x);
-        num_bodies++;
+        bodies[num_spoofed + num_real_bodies] = pose;
+        num_real_bodies++;
     }
+}
 
-
-    Point start_pos = {-5, 0, 5};
-    printf("start spoofing\n");
+void MKPComputeGoal::loadSpoofed(float distance) {
+    Point start_pos = {-4, 0, 4};
     for  (int i = 0; i < num_spoofed; i++) {
-        float x_rand = 0.3; //std::rand()/((RAND_MAX + 1u));
-        float z_rand = 0.4; //std::rand()/((RAND_MAX + 1u));
-        Point* ptr, pt;
-        ptr = &pt;
-        ptr->x = start_pos.x + i*distance + x_rand;
-        ptr->y = start_pos.y;
-        ptr->z = start_pos.z + z_rand;
-        
-        Quaternion* quat, q;
-        quat = &q;
-        quat->w = 0.0;
-        quat->x = 0.0;
-        quat->y = 0.0;
-        quat->z = 0.0;
 
-        Pose pose;
-        pose.position = ptr;
-        pose.orientation = quat;
+        float x_rand = (rand() % 100)/100.0;
+        float z_rand = (rand() % 100)/100.0;
+
+        Point* pt = new Point;
+        pt->x = start_pos.x + i*distance + x_rand;
+        pt->y = start_pos.y;
+        pt->z = start_pos.z + z_rand;
+
+        float testw = 0.691;
+        float testx = 0.019;
+        float testy = 0.029;
+        float testz = -0.722;
+
+        Quaternion* quat = new Quaternion;
         
-        printf("MKP: body %d pose addr: %p\n", num_bodies, &pose);
-        bodies[num_bodies] = &pose;
-        printf("MKP: body %d x: %.5f\n", num_bodies, bodies[num_bodies]->position->x);
-        num_bodies++;
+        quat->w = testw;
+        quat->x = testx;
+        quat->y = testy;
+        quat->z = testz;
+
+        Pose* pose = new Pose;
+        pose->position = pt;
+        pose->orientation = quat;
+        
+        bodies[i] = pose;
     }
-    //num_bodies += num_spoofed;
-    printf("end spoofing\n");
-    printf("MKP OUTSIDE: body %d x: %.5f\n", 0, bodies[0]->position->x);
-    printf("MKP OUTSIDE: body %d x: %.5f\n", 1, bodies[1]->position->x);
-    printf("num_bodies: %d\n", num_bodies);
 }
 
 float* MKPComputeGoal::getPosition() {
@@ -125,18 +109,19 @@ float* MKPComputeGoal::getOrientation() {
 } 
 
 int MKPComputeGoal::getNumBodies() {
-    return num_bodies;
+    // printf("get num bodies returning: %d\n", num_real_bodies + num_spoofed);
+    return num_real_bodies + num_spoofed;
 }
 
 /* determine spacing, polyfit, and last person, save in class variables */
 void MKPComputeGoal::scanLine() {
     /* 1. determine average spacing. iterate through ine two people at a time, 
     compute avg distance between pelvis joints and save average */
-    averageDistance = avgDistance(body_frame);
-    /* 2. determine the last person in the line */
-    lastPerson = getLastPerson(body_frame);
+    // averageDistance = avgDistance(body_frame);
+    // /* 2. determine the last person in the line */
+    // lastPerson = getLastPerson(body_frame);
     /* 3. create the fitted line */
-    fittedLine = getFittedLine(body_frame);
+    getFittedLine();
 }
 
 /* fills out the position and orientation arrays with the person's position and orientation. */
@@ -177,7 +162,7 @@ float* MKPComputeGoal::calculateJointOrient(k4abt_skeleton_t skeleton, k4abt_joi
 }
 
 //  calculate the expected position of the last person in line
-void MKPComputeGoal::polyfit(const std::vector<double> &t, const std::vector<double> &v, std::vector<double> &coeff, int order)
+void MKPComputeGoal::polyfit(const std::vector<double> &t, const std::vector<double> &v, int order)
 {
 	// Create Matrix Placeholder of size n x k, n= number of datapoints, k = order of polynomial, for exame k = 3 for cubic polynomial
 	Eigen::MatrixXd T(t.size(), order + 1);
@@ -198,37 +183,28 @@ void MKPComputeGoal::polyfit(const std::vector<double> &t, const std::vector<dou
 	
 	// Solve for linear least square fit
 	result  = T.householderQr().solve(V);
-	coeff.resize(order+1);
+	coeffs.resize(order+1);
 	for (int k = 0; k < order+1; k++)
 	{
-		coeff[k] = result[k];
+		coeffs[k] = result[k];
 	}
 
 }
  
 
-std::vector<float> MKPComputeGoal::getFittedLine(k4abt::frame bodyFrame) {
+void MKPComputeGoal::getFittedLine() {
     std::vector<double> xpos;
     std::vector<double> zpos;
-    std::vector<double> coeff;
-    std::vector<float> fitted_line;
 
-    // get fitted line
-    for (int i = 0; i < bodyFrame.get_num_bodies(); i++) {
-        k4abt_skeleton_t skeleton = bodyFrame.get_body_skeleton(i);
-        float* position = calculateJointPos(skeleton, K4ABT_JOINT_PELVIS);
-        xpos.push_back(position[0]);
-        zpos.push_back(position[2]);
+    // get fitted line from the bodies array we already loaded
+    for (int i = 0; i < num_real_bodies+num_spoofed; i++) {
+        xpos.push_back(bodies[i]->position->x);
+        zpos.push_back(bodies[i]->position->z);
     }
 
-    // get fitted function
-    polyfit(xpos, zpos, coeff, 1);
-    for (int i = 0; i < xpos.size(); i++) {
-        double zfitted = coeff[0] + coeff[1]*xpos.at(i) + coeff[2]*(pow(xpos.at(i), 2)) +coeff[3]*(pow(xpos.at(i), 3));
-        fitted_line.push_back(zfitted);
-    }
-
-    return fitted_line;
+    // printf("\nnumber of bodies: %d\n", num_real_bodies+num_spoofed);
+    // get fitted function for predicting x value based on z value
+    polyfit(zpos, xpos, 1);
 }
 
 std::vector<k4abt_skeleton_t> MKPComputeGoal::getEndPeople(k4abt::frame bodyFrame) {
